@@ -64,11 +64,6 @@ frc::SmartDashboard::PutBoolean("intake Toggle", inToggle);
 frc::SmartDashboard::PutBoolean("B", Button_B);
 
 angle = Gyro.GetAngle(); // updating the angle on the gyro
-
-leftJoyStk_y = controller.GetLeftY();
-rightJoyStk_x = controller.GetRightX();
-
-
 }
 
 
@@ -122,10 +117,6 @@ void Robot::AutonomousPeriodic() {
   diable button in case we have to flip our -7.5 and 7.5 */
 
   // back up and stop.
-  Solenoid1.Set(false);
-  Solenoid2.Set(true);
-  Solenoid3.Set(false);
-  Solenoid4.Set(true);
   count = 0;
   if (m_autoSelected == kAutoNameCustom1) // Back it up
   {
@@ -206,30 +197,28 @@ void Robot::AutonomousPeriodic() {
      {
       while((abs (encDiff1 / 0.568) < 39) && (abs (encDiff2 / .568) < 39))  
       {
-        frontRight.Set(0.6);
-        frontLeft.Set(-0.6);
+        frontRight.Set(0.4);
+        frontLeft.Set(-0.4);
         encDiff1 = LeadRight.GetPosition() - prevEncROT1;
         encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
+        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1);
       }
+      states = ARMUP;
      }
-      else if(prvState == TURN)
+      if(prvState == TURN)
       {
-       while ((abs (encDiff1 / 0.568) < 99) && (abs (encDiff2 / .568) < 99))  
+       while ((abs (encDiff1 / 0.568) < 110) && (abs (encDiff2 / .568) < 110))  
        {
-        frontRight.Set(0.6);
-        frontLeft.Set(-0.6);
+        frontRight.Set(0.4);
+        frontLeft.Set(-0.4);
         encDiff1 = LeadRight.GetPosition() - prevEncROT1;
         encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
        }
+       states = SHOOT;
       }
-      else 
-      {
-       states = ARMUP;
-       prvState = FORWARD;
        prevEncROT1 = LeadRight.GetPosition();
        prevEncROT2 = LeadLeft.GetPosition();
        timer.Reset();
-      }
       break;
      
      case ARMUP:
@@ -248,17 +237,33 @@ void Robot::AutonomousPeriodic() {
           prvState = ARMUP;
           prevEncROT1 = LeadRight.GetPosition();
           prevEncROT2 = LeadLeft.GetPosition();
+
+          LeadRight.SetPosition(0);
+          LeadLeft.SetPosition(0);
+
           Gyro.Reset();
         }
 
       break;
 
    case TURN:
-    while (Gyro.GetAngle() < 180)
+
+
+    //while ((abs (encDiff1 / 0.568) < 20) && (v < 20))
+    while( abs(LeadLeft.GetPosition() / .568) < abs (34.5) || abs(LeadRight.GetPosition() / .568) < abs (34.5))
     {
-      frontLeft.Set(-0.5);
-      frontRight.Set(0.5);
+      frontLeft.Set(0.1); // TODO: swap left and right and fix logic
+      frontRight.Set(0.1); // TODO: swap left and right and fix logic
+      encDiff1 = LeadRight.GetPosition() - prevEncROT1;
+      encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
     }
+
+    LeadRight.SetPosition(0);
+    LeadLeft.SetPosition(0);
+
+    timer.Reset();
+    if(timer.Get() < 2_s)
+      
     states=FORWARD;
     prvState=TURN;
     prevEncROT1 = LeadRight.GetPosition();
@@ -267,6 +272,9 @@ void Robot::AutonomousPeriodic() {
      break;
 
    case SHOOT:
+      timer.Reset();
+      if(timer.Get() < 1_s)
+      timer.Reset();
       if(timer.Get() < 2_s)
       {
          intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1);
@@ -280,7 +288,7 @@ void Robot::AutonomousPeriodic() {
 
         while ((abs (encDiff1 / 0.568) < 99) && (abs (encDiff2 / .568) < 99))  
           {
-          n_drive.ArcadeDrive(0,0.5);
+          n_drive.ArcadeDrive(0,0.4);
           encoderROT1 = LeadRight.GetPosition() - prevEncROT1;
           encoderROT2 = LeadLeft.GetPosition() - prevEncROT2;
         }
