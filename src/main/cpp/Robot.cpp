@@ -95,11 +95,12 @@ void Robot::AutonomousInit() {
   }
   else if (m_autoSelected == kAutoNameCustom3) 
   { 
-    states = LOWERARM;
+    states = HISHOOT;
   }
   //Setting inital encoder positions to 0, I think?
   LeadLeft.SetPosition(0);
   LeadRight.SetPosition(0); 
+
   
   // Setting the modes on the CanSparkMax motors
   frontRight.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
@@ -143,6 +144,12 @@ void Robot::AutonomousPeriodic() {
     switch (states)
     {
       case SHOOT:
+
+
+      prevEncROT1 = LeadRight.GetPosition();
+      prevEncROT2 = LeadLeft.GetPosition();  
+
+
       if(timer.Get() < 2_s)
       {
 
@@ -155,14 +162,14 @@ void Robot::AutonomousPeriodic() {
 
       case BACKWARD:
 
-        while ((encoderROT1/ 6.82) > -6.5 && (encoderROT2/ 6.82) < 6.5) // might have to switch the 7.5's
+        while ((encoderROT1/ 6.82) > -8 && (encoderROT2/ 6.82) < 8) // might have to switch the 7.5's
         {
           n_drive.ArcadeDrive(0,0.5);
           encoderROT1 = LeadRight.GetPosition();
           encoderROT2 = LeadLeft.GetPosition();
         }
         states = STOP; // ubdate the state
-   
+          intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
           break;
       
       case STOP:
@@ -176,8 +183,21 @@ void Robot::AutonomousPeriodic() {
   {
    switch (states) 
   {
-   case LOWERARM:
-    if (timer.Get() < 2_s)
+
+    case HISHOOT:
+
+      Solenoid5.Set(true);
+
+      states = LOWERARM;
+      prvState = HISHOOT;
+      timer.Reset();
+
+      break;
+
+
+    case LOWERARM:
+   
+    if (timer.Get() < 1_s)
     {
     Solenoid1.Set(true);
     Solenoid2.Set(false);
@@ -186,43 +206,55 @@ void Robot::AutonomousPeriodic() {
     }
 
     else{
-      states= FORWARD;
+      states = FORWARD;
       prvState = LOWERARM;
+
+
+      LeadRight.SetPosition(0);
+      LeadLeft.SetPosition(0);
+
+      prevEncROT1 = LeadRight.GetPosition();
+      prevEncROT2 = LeadLeft.GetPosition();
+
+      timer.Reset();
     }
 
-      break;
+    break;
 
+    
     case FORWARD:
-     if(prvState == LOWERARM)
-     {
-      while((abs (encDiff1 / 0.568) < 39) && (abs (encDiff2 / .568) < 39))  
+      if(prvState == LOWERARM)
       {
-        frontRight.Set(0.4);
-        frontLeft.Set(-0.4);
-        encDiff1 = LeadRight.GetPosition() - prevEncROT1;
-        encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
-        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1);
+        while((abs (encDiff1 / 0.568) < 35) && (abs (encDiff2 / .568) < 35))  
+        {
+          frontRight.Set(0.4);
+          frontLeft.Set(-0.4);
+          encDiff1 = LeadRight.GetPosition() - prevEncROT1;
+          encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
+          intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1);
+        }
+        states = ARMUP;
       }
-      states = ARMUP;
-     }
       if(prvState == TURN)
       {
-       while ((abs (encDiff1 / 0.568) < 110) && (abs (encDiff2 / .568) < 110))  
-       {
-        frontRight.Set(0.4);
-        frontLeft.Set(-0.4);
-        encDiff1 = LeadRight.GetPosition() - prevEncROT1;
-        encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
-       }
-       states = SHOOT;
+        while ((abs (encDiff1 / 0.568) < 120) && (abs (encDiff2 / .568) < 120))  
+        {
+          frontRight.Set(0.4);
+          frontLeft.Set(-0.4);
+          encDiff1 = LeadRight.GetPosition() - prevEncROT1;
+          encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
+        }
+        timer.Reset();
+        states = SHOOT;
+
       }
-       prevEncROT1 = LeadRight.GetPosition();
-       prevEncROT2 = LeadLeft.GetPosition();
-       timer.Reset();
+      prevEncROT1 = LeadRight.GetPosition();
+      prevEncROT2 = LeadLeft.GetPosition();
+      timer.Reset();
       break;
      
-     case ARMUP:
-      if(timer.Get() < 2_s)
+    case ARMUP:
+      if(timer.Get() < 1_s)
       {
         intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
         Solenoid1.Set(false);
@@ -250,10 +282,10 @@ void Robot::AutonomousPeriodic() {
 
 
     //while ((abs (encDiff1 / 0.568) < 20) && (v < 20))
-    while( abs(LeadLeft.GetPosition() / .568) < abs (34.5) || abs(LeadRight.GetPosition() / .568) < abs (34.5))
+    while( abs(LeadLeft.GetPosition() / .568) < abs (34.25) || abs(LeadRight.GetPosition() / .568) < abs (34.25))
     {
-      frontLeft.Set(0.1); // TODO: swap left and right and fix logic
-      frontRight.Set(0.1); // TODO: swap left and right and fix logic
+      frontLeft.Set(0.2); // TODO: swap left and right and fix logic
+      frontRight.Set(0.2); // TODO: swap left and right and fix logic
       encDiff1 = LeadRight.GetPosition() - prevEncROT1;
       encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
     }
@@ -268,33 +300,53 @@ void Robot::AutonomousPeriodic() {
     prvState=TURN;
     prevEncROT1 = LeadRight.GetPosition();
     prevEncROT2 = LeadLeft.GetPosition();
-    
-     break;
 
-   case SHOOT:
-      timer.Reset();
+    break;
+
+  case SHOOT:
+      
       if(timer.Get() < 1_s)
-      timer.Reset();
-      if(timer.Get() < 2_s)
       {
-         intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1);
+        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
       }
-      else{
-          states = BACKWARD;
-          } // update the state
-          break;
 
-      case BACKWARD:
+      else if(timer.Get() < 7_s)
+      {
+        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1);
+        n_drive.ArcadeDrive(0,0.38);
+      }
+      else
+      {
+        
+        //prep for backwards state 
 
-        while ((abs (encDiff1 / 0.568) < 99) && (abs (encDiff2 / .568) < 99))  
-          {
-          n_drive.ArcadeDrive(0,0.4);
-          encoderROT1 = LeadRight.GetPosition() - prevEncROT1;
-          encoderROT2 = LeadLeft.GetPosition() - prevEncROT2;
+        //Reset encoder positions 
+        LeadRight.SetPosition(0);
+        LeadLeft.SetPosition(0);
+
+        //update previous positions
+        prevEncROT1 = LeadRight.GetPosition();
+        prevEncROT2 = LeadLeft.GetPosition();
+        
+        //upstate states
+        states = BACKWARD;
+        prvState = SHOOT;
+      } // update the state
+      break;
+
+  case BACKWARD:
+        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1);
+
+        while ((abs (encDiff1 / 0.568) < 120) && (abs (encDiff2 / .568) < 120))  
+        {
+          frontRight.Set(-0.4);
+          frontLeft.Set(0.4);
+          encDiff1 = LeadRight.GetPosition() - prevEncROT1;
+          encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
         }
         states = STOP; // update the state
-   
-          break;
+        prvState = BACKWARD;
+        break;
       
     
    default:
@@ -408,11 +460,11 @@ else
 {
   if (controller.GetLeftY() > ForwardDrive)
   {
-    ForwardDrive += 0.01; // change this to change acceleration, bigger number = faster accel
+    ForwardDrive += 0.02; // change this to change acceleration, bigger number = faster accel
   }
   if (controller.GetLeftY() < ForwardDrive)
   {
-    ForwardDrive -= 0.01; // change this to change acceleration, bigger number = faster accel
+    ForwardDrive -= 0.02; // change this to change acceleration, bigger number = faster accel
   }
 }
 
@@ -425,11 +477,11 @@ else
 {
  if (controller.GetRightX() > TurnDrive)
   {
-    TurnDrive += 0.01;// change this to change acceleration, bigger number = faster accel
+    TurnDrive += 0.02;// change this to change acceleration, bigger number = faster accel
   }
  if (controller.GetRightX() < TurnDrive)
   {
-    TurnDrive -= 0.01;// change this to change acceleration, bigger number = faster accel
+    TurnDrive -= 0.02;// change this to change acceleration, bigger number = faster accel
   }
 }
 
