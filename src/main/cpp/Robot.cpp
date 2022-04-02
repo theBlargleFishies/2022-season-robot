@@ -101,12 +101,6 @@ void Robot::AutonomousInit() {
   { 
     states = HISHOOT;
   }
-<<<<<<< HEAD
-=======
-  //Setting inital encoder positions to 0, I think?
-  LeadLeft.SetPosition(0);
-  LeadRight.SetPosition(0); 
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
 
   
   // Setting the modes on the CanSparkMax motors
@@ -193,15 +187,12 @@ void Robot::AutonomousPeriodic() {
 
     case HISHOOT:
 
-<<<<<<< HEAD
       if (LeadRight.GetPosition() > 0 || LeadRight.GetPosition() < 0)
       {
         LeadRight.SetPosition(0);
         LeadLeft.SetPosition(0);
       }
       
-=======
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
       Solenoid5.Set(true);
 
       states = LOWERARM;
@@ -270,10 +261,7 @@ void Robot::AutonomousPeriodic() {
       break;
      
     case ARMUP:
-<<<<<<< HEAD
     wpi::outs() << "ARM UP!";
-=======
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
       if(timer.Get() < 1_s)
       {
         intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
@@ -299,21 +287,11 @@ void Robot::AutonomousPeriodic() {
       break;
 
    case TURN:
-<<<<<<< HEAD
     
     while( abs(LeadLeft.GetPosition() / .568) < abs (35.0) || abs(LeadRight.GetPosition() / .568) < abs (35.0))
     {
       frontLeft.Set(0.15); // TODO: swap left and right and fix logic
       frontRight.Set(0.15); // TODO: swap left and right and fix logic
-=======
-
-
-    //while ((abs (encDiff1 / 0.568) < 20) && (v < 20))
-    while( abs(LeadLeft.GetPosition() / .568) < abs (34.25) || abs(LeadRight.GetPosition() / .568) < abs (34.25))
-    {
-      frontLeft.Set(0.2); // TODO: swap left and right and fix logic
-      frontRight.Set(0.2); // TODO: swap left and right and fix logic
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
       encDiff1 = LeadRight.GetPosition() - prevEncROT1;
       encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
     }
@@ -330,7 +308,6 @@ void Robot::AutonomousPeriodic() {
     prevEncROT2 = LeadLeft.GetPosition();
 
     break;
-<<<<<<< HEAD
 
   case SHOOT:
       
@@ -354,54 +331,11 @@ void Robot::AutonomousPeriodic() {
         while (((LeadRight.GetPosition() / 0.568) > -5) && ((LeadLeft.GetPosition() / .568) < 5))  
         {
           intake.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -0);
-=======
-
-  case SHOOT:
-      
-      if(timer.Get() < 1_s)
-      {
-        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
-      }
-
-      else if(timer.Get() < 7_s)
-      {
-        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1);
-        n_drive.ArcadeDrive(0,0.38);
-      }
-      else
-      {
-        
-        //prep for backwards state 
-
-        //Reset encoder positions 
-        LeadRight.SetPosition(0);
-        LeadLeft.SetPosition(0);
-
-        //update previous positions
-        prevEncROT1 = LeadRight.GetPosition();
-        prevEncROT2 = LeadLeft.GetPosition();
-        
-        //upstate states
-        states = BACKWARD;
-        prvState = SHOOT;
-      } // update the state
-      break;
-
-  case BACKWARD:
-        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1);
-
-        while ((abs (encDiff1 / 0.568) < 120) && (abs (encDiff2 / .568) < 120))  
-        {
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
           frontRight.Set(-0.4);
           frontLeft.Set(0.4);
           encDiff1 = LeadRight.GetPosition() - prevEncROT1;
           encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
         }
-<<<<<<< HEAD
-=======
-        states = STOP; // update the state
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
         prvState = BACKWARD;
         break;
       
@@ -547,43 +481,13 @@ if (armToggle)
 }
 else
 {
-<<<<<<< HEAD
   frontLeft.SetOpenLoopRampRate(0.3);
   frontRight.SetOpenLoopRampRate(0.3);
   backLeft.SetOpenLoopRampRate(0.3);
   backRight.SetOpenLoopRampRate(0.3);
-=======
-  if (controller.GetLeftY() > ForwardDrive)
-  {
-    ForwardDrive += 0.02; // change this to change acceleration, bigger number = faster accel
-  }
-  if (controller.GetLeftY() < ForwardDrive)
-  {
-    ForwardDrive -= 0.02; // change this to change acceleration, bigger number = faster accel
-  }
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
 }
 n_drive.ArcadeDrive( RightStickAdjX, leftStickAdjY, true);
 
-<<<<<<< HEAD
-=======
-// Turning acceleration
-if (abs(controller.GetRightX()) < 0.1 ) // might have to change this to 0.1. Try it and see if it's better.
-{
-  TurnDrive = controller.GetRightX();
-}
-else
-{
- if (controller.GetRightX() > TurnDrive)
-  {
-    TurnDrive += 0.02;// change this to change acceleration, bigger number = faster accel
-  }
- if (controller.GetRightX() < TurnDrive)
-  {
-    TurnDrive -= 0.02;// change this to change acceleration, bigger number = faster accel
-  }
-}
->>>>>>> 41a048a6680de0ba6a9e599a8da90897229b7a0f
 
 
 }
