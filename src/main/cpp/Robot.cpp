@@ -453,25 +453,6 @@ if(!armToggle)
 //-------------------------------------Drive Control-----------------------------------------------------
 // Forward/Backward Acceleration
 // Joysticks
-
-  leftStickAdjX = pow(controller.GetLeftX(),1);
-  leftStickAdjY = pow(controller.GetLeftY(),1);
-  RightStickAdjX = pow(controller.GetRightX(),1);
-  RightStickAdjY = pow(controller.GetRightY(),1);
-
-  ForwardDrive = (abs(leftTrigger) +rampOffset)* leftStickAdjY * rampFactor;
-  TurnDrive = (abs(leftTrigger) +rampOffset)* RightStickAdjX * rampFactor;
-  
-
- if (RightStickAdjX > TurnDrive)
-  {
-    TurnDrive += turnRamp;// change this to change acceleration, bigger number = faster accel
-  }
- if (RightStickAdjX < TurnDrive)
-  {
-    TurnDrive -= turnRamp;// change this to change acceleration, bigger number = faster accel
-  }
-
 if (armToggle)
 {
   frontLeft.SetOpenLoopRampRate(1);
@@ -487,8 +468,6 @@ else
   backRight.SetOpenLoopRampRate(0.3);
 }
 n_drive.ArcadeDrive( RightStickAdjX, leftStickAdjY, true);
-
-
 
 }
 
