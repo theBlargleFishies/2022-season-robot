@@ -22,6 +22,7 @@
 #include <frc/ADXRS450_Gyro.h>
 #include "ctre/Phoenix.h"
 #include <frc/Servo.h>
+#include <tgmath.h>
 
 
 
@@ -58,7 +59,7 @@ class Robot : public frc::TimedRobot {
                                               Don't forget to uncomment all of the Solenoid2's in the cpp and make sure the inputs are correct (true or false) 
                                               depending on what we are trying to do. Also, make sure I didn't miss any. Where ever there is a Solenoid1 there should
                                               also be a Solenoid2*/
-  
+  frc::Solenoid Solenoid5 {1, CTREPCM, 4}; // highshooter
 //---------------------------------Motor Controller Related Objects--------------------------------------
   VictorSPX intake {7};
 
@@ -88,6 +89,12 @@ class Robot : public frc::TimedRobot {
   double rightJoyStk_y;
   bool rightStickB;
 
+
+  double leftStickAdjX;
+  double leftStickAdjY;
+  double RightStickAdjX;
+  double RightStickAdjY;
+
   bool Button_A = false;
   bool Button_B = false;
   bool Button_X = false;
@@ -108,6 +115,13 @@ class Robot : public frc::TimedRobot {
   double encDiff2 = 0.0;
   double ForwardDrive = 0.0;
   double TurnDrive = 0.0;
+
+  double driveRamp = 0;
+  double turnRamp = 0;
+
+  double rampFactor = 1;
+  double rampOffset = 0;
+
 //-------------------------------------Arm Related Variables---------------------------------------------
   bool prevBump = false; 
   bool armToggle = false; 
@@ -115,9 +129,10 @@ class Robot : public frc::TimedRobot {
   bool prevB = false;
   bool inToggle = false;
 //---------------------------------------Autonomous States-----------------------------------------------
-  enum STATES{FORWARD,BACKWARD,TURN,SHOOT,INTAKE,STOP,LOWERARM,ARMUP};
+  enum STATES{FORWARD,HISHOOT,BACKWARD,BAKCWARD2,TURN,SHOOT,INTAKE,STOP,LOWERARM,ARMUP};
   STATES states;
   STATES prvState;
+
 
 //-----------------------------------------Misc Variables------------------------------------------------
   units::second_t startTime;

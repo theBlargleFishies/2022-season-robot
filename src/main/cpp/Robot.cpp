@@ -22,13 +22,14 @@ void Robot::RobotInit() {
   backLeft.RestoreFactoryDefaults();
   backRight.RestoreFactoryDefaults();
 
-  /*frontRight.SetIdleMode (kCoast);
-  frontLeft.SetIdleMode (kCoast);
-  backRight.SetIdleMode (kCoast);
-  backLeft.SetIdleMode (kCoast);*/
-
+  
   backLeft.Follow(frontLeft); // setting the followers
   backRight.Follow(frontRight);
+
+  frontLeft.SetOpenLoopRampRate(0);
+  frontRight.SetOpenLoopRampRate(0);
+  backLeft.SetOpenLoopRampRate(0);
+  backRight.SetOpenLoopRampRate(0);
 
   armUp = true; // arm in raised position
 
@@ -48,7 +49,7 @@ void Robot::RobotPeriodic() {
 //----------------------------------Printing to Dashboard-------------------------------------------------
 frc::SmartDashboard::PutNumber("Left Y :", leftJoyStk_y);
 frc::SmartDashboard::PutNumber("Right X :", rightJoyStk_x);
-frc::SmartDashboard::PutNumber("Right Trigger :", rightTrigger);
+frc::SmartDashboard::PutNumber("Left Trigger :", leftTrigger);
 frc::SmartDashboard::PutBoolean("Right Bumper :", rightBumper);
 frc::SmartDashboard::PutNumber("Right Encoder:", LeadRight.GetPosition());
 frc::SmartDashboard::PutNumber("Left Encoder:", LeadLeft.GetPosition());
@@ -56,12 +57,15 @@ frc::SmartDashboard::PutNumber("Gyro Angle :", angle);
 frc::SmartDashboard::PutNumber("Port :", Gyro.GetPort());
 frc::SmartDashboard::PutBoolean("Arm Toggle", armToggle);
 frc::SmartDashboard::PutBoolean("Arm1", Solenoid1.Get());
-//frc::SmartDashboard::PutBoolean("Arm2", Solenoid2.Get());
 frc::SmartDashboard::PutNumber("forward drive", ForwardDrive);
 frc::SmartDashboard::PutNumber("turn drive", TurnDrive);
 frc::SmartDashboard::PutNumber("count", count);
 frc::SmartDashboard::PutBoolean("intake Toggle", inToggle);
 frc::SmartDashboard::PutBoolean("B", Button_B);
+frc::SmartDashboard::PutNumber("Lead right", frontRight.Get());
+frc::SmartDashboard::PutNumber("Lead Right", frontLeft.Get());
+frc::SmartDashboard::PutNumber("Right after shoot", encoderROT1);
+frc::SmartDashboard::PutNumber("Left after Shoot", encoderROT2);
 
 angle = Gyro.GetAngle(); // updating the angle on the gyro
 }
@@ -93,13 +97,11 @@ void Robot::AutonomousInit() {
   {
     states = SHOOT; // set beginning state for this mode
   }
-  else if (m_autoSelected == kAutoNameCustom3) 
+  else if (m_autoSelected == kAutoNameDefault) 
   { 
-    states = LOWERARM;
+    states = HISHOOT;
   }
-  //Setting inital encoder positions to 0, I think?
-  LeadLeft.SetPosition(0);
-  LeadRight.SetPosition(0); 
+
   
   // Setting the modes on the CanSparkMax motors
   frontRight.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
@@ -143,6 +145,12 @@ void Robot::AutonomousPeriodic() {
     switch (states)
     {
       case SHOOT:
+
+
+      prevEncROT1 = LeadRight.GetPosition();
+      prevEncROT2 = LeadLeft.GetPosition();  
+
+
       if(timer.Get() < 2_s)
       {
 
@@ -155,14 +163,14 @@ void Robot::AutonomousPeriodic() {
 
       case BACKWARD:
 
-        while ((encoderROT1/ 6.82) > -6.5 && (encoderROT2/ 6.82) < 6.5) // might have to switch the 7.5's
+        while ((encoderROT1/ 6.82) > -8 && (encoderROT2/ 6.82) < 8) // might have to switch the 7.5's
         {
           n_drive.ArcadeDrive(0,0.5);
           encoderROT1 = LeadRight.GetPosition();
           encoderROT2 = LeadLeft.GetPosition();
         }
         states = STOP; // ubdate the state
-   
+          intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
           break;
       
       case STOP:
@@ -172,12 +180,31 @@ void Robot::AutonomousPeriodic() {
      
   }
  
-  else if (m_autoSelected == kAutoNameCustom3) //High Shoot
+  else if (m_autoSelected == kAutoNameDefault) //High Shoot
   {
    switch (states) 
   {
-   case LOWERARM:
-    if (timer.Get() < 2_s)
+
+    case HISHOOT:
+
+      if (LeadRight.GetPosition() > 0 || LeadRight.GetPosition() < 0)
+      {
+        LeadRight.SetPosition(0);
+        LeadLeft.SetPosition(0);
+      }
+      
+      Solenoid5.Set(true);
+
+      states = LOWERARM;
+      prvState = HISHOOT;
+      timer.Reset();
+
+      break;
+
+
+    case LOWERARM:
+   
+    if (timer.Get() < 1_s)
     {
     Solenoid1.Set(true);
     Solenoid2.Set(false);
@@ -186,43 +213,56 @@ void Robot::AutonomousPeriodic() {
     }
 
     else{
-      states= FORWARD;
+      states = FORWARD;
       prvState = LOWERARM;
+
+
+      LeadRight.SetPosition(0);
+      LeadLeft.SetPosition(0);
+
+      prevEncROT1 = LeadRight.GetPosition();
+      prevEncROT2 = LeadLeft.GetPosition();
+
+      timer.Reset();
     }
 
-      break;
+    break;
 
+    
     case FORWARD:
-     if(prvState == LOWERARM)
-     {
-      while((abs (encDiff1 / 0.568) < 39) && (abs (encDiff2 / .568) < 39))  
+      if(prvState == LOWERARM)
       {
-        frontRight.Set(0.4);
-        frontLeft.Set(-0.4);
-        encDiff1 = LeadRight.GetPosition() - prevEncROT1;
-        encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
-        intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1);
+        while((abs (encDiff1 / 0.568) < 35) && (abs (encDiff2 / .568) < 35))  
+        {
+          frontRight.Set(0.4);
+          frontLeft.Set(-0.4);
+          encDiff1 = LeadRight.GetPosition() - prevEncROT1;
+          encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
+          intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 1);
+        }
+        states = ARMUP;
       }
-      states = ARMUP;
-     }
       if(prvState == TURN)
       {
-       while ((abs (encDiff1 / 0.568) < 110) && (abs (encDiff2 / .568) < 110))  
-       {
-        frontRight.Set(0.4);
-        frontLeft.Set(-0.4);
-        encDiff1 = LeadRight.GetPosition() - prevEncROT1;
-        encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
-       }
-       states = SHOOT;
+        while ((abs (encDiff1 / 0.568) < 120) && (abs (encDiff2 / .568) < 120))  
+        {
+          frontRight.Set(0.4);
+          frontLeft.Set(-0.4);
+          encDiff1 = LeadRight.GetPosition() - prevEncROT1;
+          encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
+        }
+        timer.Reset();
+        states = SHOOT;
+
       }
-       prevEncROT1 = LeadRight.GetPosition();
-       prevEncROT2 = LeadLeft.GetPosition();
-       timer.Reset();
+      prevEncROT1 = LeadRight.GetPosition();
+      prevEncROT2 = LeadLeft.GetPosition();
+      timer.Reset();
       break;
      
-     case ARMUP:
-      if(timer.Get() < 2_s)
+    case ARMUP:
+    wpi::outs() << "ARM UP!";
+      if(timer.Get() < 1_s)
       {
         intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
         Solenoid1.Set(false);
@@ -247,13 +287,11 @@ void Robot::AutonomousPeriodic() {
       break;
 
    case TURN:
-
-
-    //while ((abs (encDiff1 / 0.568) < 20) && (v < 20))
-    while( abs(LeadLeft.GetPosition() / .568) < abs (34.5) || abs(LeadRight.GetPosition() / .568) < abs (34.5))
+    
+    while( abs(LeadLeft.GetPosition() / .568) < abs (35.0) || abs(LeadRight.GetPosition() / .568) < abs (35.0))
     {
-      frontLeft.Set(0.1); // TODO: swap left and right and fix logic
-      frontRight.Set(0.1); // TODO: swap left and right and fix logic
+      frontLeft.Set(0.15); // TODO: swap left and right and fix logic
+      frontRight.Set(0.15); // TODO: swap left and right and fix logic
       encDiff1 = LeadRight.GetPosition() - prevEncROT1;
       encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
     }
@@ -268,39 +306,46 @@ void Robot::AutonomousPeriodic() {
     prvState=TURN;
     prevEncROT1 = LeadRight.GetPosition();
     prevEncROT2 = LeadLeft.GetPosition();
-    
-     break;
 
-   case SHOOT:
-      timer.Reset();
-      if(timer.Get() < 1_s)
-      timer.Reset();
-      if(timer.Get() < 2_s)
-      {
-         intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1);
-      }
-      else{
-          states = BACKWARD;
-          } // update the state
-          break;
+    break;
 
-      case BACKWARD:
+  case SHOOT:
+      
+      frc::Wait(1_s);
+      intake.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1);
+      frc::Wait(2_s);
 
-        while ((abs (encDiff1 / 0.568) < 99) && (abs (encDiff2 / .568) < 99))  
-          {
-          n_drive.ArcadeDrive(0,0.4);
-          encoderROT1 = LeadRight.GetPosition() - prevEncROT1;
-          encoderROT2 = LeadLeft.GetPosition() - prevEncROT2;
+        //update previous positions
+        prevEncROT1 = LeadRight.GetPosition();
+        prevEncROT2 = LeadLeft.GetPosition();
+        encoderROT1 = LeadRight.GetPosition();
+        encoderROT2 = LeadLeft.GetPosition();
+        
+        //upstate states
+        states = BAKCWARD2;
+        prvState = SHOOT;
+
+      break;
+
+  case BAKCWARD2:
+        while (((LeadRight.GetPosition() / 0.568) > -5) && ((LeadLeft.GetPosition() / .568) < 5))  
+        {
+          intake.Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -0);
+          frontRight.Set(-0.4);
+          frontLeft.Set(0.4);
+          encDiff1 = LeadRight.GetPosition() - prevEncROT1;
+          encDiff2 = LeadLeft.GetPosition() - prevEncROT2;
         }
-        states = STOP; // update the state
-   
-          break;
+        prvState = BACKWARD;
+        break;
       
     
    default:
       intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
       frontRight.Set(0);
       frontLeft.Set(0);
+      LeadLeft.SetPosition(0);
+      LeadRight.SetPosition(0); 
      break;
    }
   }
@@ -317,10 +362,10 @@ void Robot::AutonomousPeriodic() {
 }
 
 void Robot::TeleopInit() {
-  frontRight.SetIdleMode (rev::CANSparkMax::IdleMode::kCoast);
-  frontLeft.SetIdleMode (rev::CANSparkMax::IdleMode::kCoast);
-  backRight.SetIdleMode (rev::CANSparkMax::IdleMode::kCoast);
-  backLeft.SetIdleMode (rev::CANSparkMax::IdleMode::kCoast);
+  frontRight.SetIdleMode (rev::CANSparkMax::IdleMode::kBrake);
+  frontLeft.SetIdleMode (rev::CANSparkMax::IdleMode::kBrake);
+  backRight.SetIdleMode (rev::CANSparkMax::IdleMode::kBrake);
+  backLeft.SetIdleMode (rev::CANSparkMax::IdleMode::kBrake);
   armToggle = true;
 
 }
@@ -331,9 +376,17 @@ void Robot::TeleopPeriodic() {
 rightBumper = controller2.GetRightBumper();
 leftBumper = controller2.GetLeftBumper();
 rightStickB = controller2.GetBButton();
+Button_X = controller2.GetXButton();
+leftTrigger = controller.GetLeftTriggerAxis();
 
 //-------------------------------------Arm Control-----------------------------------------------------
 // Arm Toggle
+
+
+//-------------------------------------Control Variables-----------------------------------------------
+
+Solenoid5.Set(Button_X);
+
 if (rightBumper && ! prevBump)
 {
   if(armToggle)
@@ -363,7 +416,7 @@ if(armToggle)
 {
   if(leftBumper)
   {
-    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -.6); // Outtake
+    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1); // Outtake
   }
   else
   {
@@ -381,7 +434,7 @@ if(!armToggle)
 {
   if(leftBumper)
   {
-    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -.6); // Outtake
+    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, -1); // Outtake
   }
    else if(inToggle)
   {
@@ -389,7 +442,7 @@ if(!armToggle)
   }
   else
   {
-    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, .6); // Intake
+    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, .65); // Intake
   }
   Solenoid1.Set(true);
   Solenoid2.Set(false);
@@ -400,46 +453,42 @@ if(!armToggle)
 //-------------------------------------Drive Control-----------------------------------------------------
 // Forward/Backward Acceleration
 // Joysticks
-if (abs(controller.GetLeftY()) < 0.1 ) // might have to change this to 0.1. Try it and see if it's better.
+
+  leftStickAdjX = pow(controller.GetLeftX(),1);
+  leftStickAdjY = pow(controller.GetLeftY(),1);
+  RightStickAdjX = pow(controller.GetRightX(),1);
+  RightStickAdjY = pow(controller.GetRightY(),1);
+
+  ForwardDrive = (abs(leftTrigger) +rampOffset)* leftStickAdjY * rampFactor;
+  TurnDrive = (abs(leftTrigger) +rampOffset)* RightStickAdjX * rampFactor;
+  
+
+ if (RightStickAdjX > TurnDrive)
+  {
+    TurnDrive += turnRamp;// change this to change acceleration, bigger number = faster accel
+  }
+ if (RightStickAdjX < TurnDrive)
+  {
+    TurnDrive -= turnRamp;// change this to change acceleration, bigger number = faster accel
+  }
+
+if (armToggle)
 {
-  ForwardDrive = controller.GetLeftY();
+  frontLeft.SetOpenLoopRampRate(1);
+  frontRight.SetOpenLoopRampRate(1);
+  backLeft.SetOpenLoopRampRate(1);
+  backRight.SetOpenLoopRampRate(1);
 }
 else
 {
-  if (controller.GetLeftY() > ForwardDrive)
-  {
-    ForwardDrive += 0.01; // change this to change acceleration, bigger number = faster accel
-  }
-  if (controller.GetLeftY() < ForwardDrive)
-  {
-    ForwardDrive -= 0.01; // change this to change acceleration, bigger number = faster accel
-  }
+  frontLeft.SetOpenLoopRampRate(0.3);
+  frontRight.SetOpenLoopRampRate(0.3);
+  backLeft.SetOpenLoopRampRate(0.3);
+  backRight.SetOpenLoopRampRate(0.3);
 }
+n_drive.ArcadeDrive( RightStickAdjX, leftStickAdjY, true);
 
-// Turning acceleration
-if (abs(controller.GetRightX()) < 0.1 ) // might have to change this to 0.1. Try it and see if it's better.
-{
-  TurnDrive = controller.GetRightX();
-}
-else
-{
- if (controller.GetRightX() > TurnDrive)
-  {
-    TurnDrive += 0.01;// change this to change acceleration, bigger number = faster accel
-  }
- if (controller.GetRightX() < TurnDrive)
-  {
-    TurnDrive -= 0.01;// change this to change acceleration, bigger number = faster accel
-  }
-}
 
-if(armToggle)
-{
-n_drive.ArcadeDrive(TurnDrive * 0.7 , ForwardDrive * 0.7, true); //Kinda like cod games
-}
-else{
-n_drive.ArcadeDrive(TurnDrive , ForwardDrive, true); //Kinda like cod games
-}
 
 }
 
