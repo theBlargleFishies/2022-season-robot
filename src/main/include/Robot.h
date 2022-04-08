@@ -16,7 +16,6 @@
 #include <frc/drive/DifferentialDrive.h>
 #include "rev/CANSparkMax.h"
 #include <frc/DigitalInput.h>
-#include <frc/ADXRS450_Gyro.h>
 #include <frc/PneumaticsControlModule.h>
 #include <frc/Timer.h>
 #include <frc/ADXRS450_Gyro.h>
@@ -68,6 +67,8 @@ class Robot : public frc::TimedRobot {
   rev::CANSparkMax frontRight{4, rev::CANSparkMax::MotorType::kBrushless};
   rev::CANSparkMax backRight{5, rev::CANSparkMax::MotorType::kBrushless};
   
+ // VictorSPX NewArm {6};
+
   rev::SparkMaxRelativeEncoder LeadRight = frontRight.GetEncoder();
   rev::SparkMaxRelativeEncoder LeadLeft = frontLeft.GetEncoder();
 
@@ -128,6 +129,7 @@ class Robot : public frc::TimedRobot {
   bool armUp = false;
   bool prevB = false;
   bool inToggle = false;
+  bool NewArmControl = false;
 //---------------------------------------Autonomous States-----------------------------------------------
   enum STATES{FORWARD,HISHOOT,BACKWARD,BAKCWARD2,TURN,SHOOT,INTAKE,STOP,LOWERARM,ARMUP};
   STATES states;

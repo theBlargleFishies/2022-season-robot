@@ -1,7 +1,7 @@
 // Copyright (c) FIRST and other WPILib contributors.
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
-// TEST comment
+// TEST commenths
 
 #include "Robot.h"
 #include <fmt/core.h>
@@ -104,10 +104,10 @@ void Robot::AutonomousInit() {
 
   
   // Setting the modes on the CanSparkMax motors
-  frontRight.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-  frontLeft.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-  backRight.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-  backLeft.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
+  frontRight.SetIdleMode(rev::CANSparkMax::IdleMode::kCoast);
+  frontLeft.SetIdleMode(rev::CANSparkMax::IdleMode::kCoast);
+  backRight.SetIdleMode(rev::CANSparkMax::IdleMode::kCoast);
+  backLeft.SetIdleMode(rev::CANSparkMax::IdleMode::kCoast);
 
   timer.Reset();
   timer.Start();
@@ -261,7 +261,6 @@ void Robot::AutonomousPeriodic() {
       break;
      
     case ARMUP:
-    wpi::outs() << "ARM UP!";
       if(timer.Get() < 1_s)
       {
         intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0);
@@ -288,7 +287,7 @@ void Robot::AutonomousPeriodic() {
 
    case TURN:
     
-    while( abs(LeadLeft.GetPosition() / .568) < abs (35.0) || abs(LeadRight.GetPosition() / .568) < abs (35.0))
+    while( abs(LeadLeft.GetPosition() / .568) < abs (35.3) || abs(LeadRight.GetPosition() / .568) < abs (35.3))
     {
       frontLeft.Set(0.15); // TODO: swap left and right and fix logic
       frontRight.Set(0.15); // TODO: swap left and right and fix logic
@@ -301,9 +300,11 @@ void Robot::AutonomousPeriodic() {
 
     timer.Reset();
     if(timer.Get() < 2_s)
-      
+
     states=FORWARD;
     prvState=TURN;
+    
+    
     prevEncROT1 = LeadRight.GetPosition();
     prevEncROT2 = LeadLeft.GetPosition();
 
@@ -382,7 +383,6 @@ leftTrigger = controller.GetLeftTriggerAxis();
 //-------------------------------------Arm Control-----------------------------------------------------
 // Arm Toggle
 
-
 //-------------------------------------Control Variables-----------------------------------------------
 
 Solenoid5.Set(Button_X);
@@ -442,9 +442,9 @@ if(!armToggle)
   }
   else
   {
-    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, .65); // Intake
+    intake.Set (ctre::phoenix::motorcontrol::ControlMode::PercentOutput, 0.8); // Intake
   }
-  Solenoid1.Set(true);
+  Solenoid1.Set(true);                                                                       
   Solenoid2.Set(false);
   Solenoid3.Set(true);
   Solenoid4.Set(false);
@@ -453,21 +453,48 @@ if(!armToggle)
 //-------------------------------------Drive Control-----------------------------------------------------
 // Forward/Backward Acceleration
 // Joysticks
-if (armToggle)
+if (abs(controller.GetLeftY()) < 0.1 ) // might have to change this to 0.1. Try it and see if it's better.
 {
-  frontLeft.SetOpenLoopRampRate(1);
-  frontRight.SetOpenLoopRampRate(1);
-  backLeft.SetOpenLoopRampRate(1);
-  backRight.SetOpenLoopRampRate(1);
+  ForwardDrive = controller.GetLeftY() ;
 }
 else
 {
-  frontLeft.SetOpenLoopRampRate(0.3);
-  frontRight.SetOpenLoopRampRate(0.3);
-  backLeft.SetOpenLoopRampRate(0.3);
-  backRight.SetOpenLoopRampRate(0.3);
+  if (controller.GetLeftY() > ForwardDrive)
+  {
+    ForwardDrive += 0.01; // change this to change acceleration, bigger number = faster accel
+  }
+  if (controller.GetLeftY() < ForwardDrive)
+  {
+    ForwardDrive -= 0.01; // change this to change acceleration, bigger number = faster accel
+  }
 }
-n_drive.ArcadeDrive( RightStickAdjX, leftStickAdjY, true);
+
+// Turning acceleration
+if (abs(controller.GetRightX()) < 0.1 ) // might have to change this to 0.1. Try it and see if it's better.
+{
+  TurnDrive = controller.GetRightX();
+}
+else
+{
+ if (abs(controller.GetRightX() > TurnDrive))
+  {
+    TurnDrive += 0.01;// change this to change acceleration, bigger number = faster accel
+  }
+ if (abs(controller.GetRightX() < TurnDrive))
+  {
+    TurnDrive -= 0.01;// change this to change acceleration, bigger number = faster accel
+  }
+}
+
+if(armToggle)
+{
+n_drive.ArcadeDrive(TurnDrive * 0.7 , ForwardDrive * 0.7, true); //Kinda like cod games
+}
+else{
+n_drive.ArcadeDrive(TurnDrive , ForwardDrive, true); //Kinda like cod games
+}
+
+
 
 }
 
